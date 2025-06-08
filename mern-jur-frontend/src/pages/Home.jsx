@@ -1,77 +1,68 @@
+import { legalCases } from './services/cases/cases';
 import React, { useEffect, useState } from 'react';
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
 import Grid from '@mui/material/Grid';
-
 import { Post } from '../components/Post';
-import { TagsBlock } from '../components/TagsBlock';
-import { CommentsBlock } from '../components/CommentsBlock';
-import { getPosts } from './services/routes';
 
 export const Home = () => {
   const [posts, setPosts] = useState([]);
-
-  async function fetchPosts() {
-    try {
-      const data = await getPosts();
-      setPosts(data.data)
-    } catch (error) {
-      console.log(error)
-    }
-  }
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchPosts()
-  }, [setPosts])
+    const savedPosts = JSON.parse(localStorage.getItem('posts')) || [];
+    setPosts(savedPosts);
+    setLoading(false);
+  }, []);
+
+  // Правильное объединение данных
+  const allPosts = [...legalCases, ...posts].map((post) => {
+    // Для legalCases
+    if (post.id) {
+      return {
+        id: post.id,
+        title: post.title,
+        imageUrl: post.imageUrl,
+        user: {
+          avatarUrl: 'https://mui.com/static/images/avatar/1.jpg',
+          fullName: 'Система'
+        },
+        createdAt: post.createdAt,
+        tags: post.tags || [],
+        text: post.text
+      };
+    }
+    // Для ваших постов
+    return {
+      _id: post._id,
+      title: post.title,
+      imageUrl: post.imageUrl,
+      user: {
+        avatarUrl: post.user?.avatarUrl || 'https://mui.com/static/images/avatar/1.jpg',
+        fullName: post.user?.fullName || 'Аноним'
+      },
+      createdAt: post.createdAt,
+      viewsCount: post.viewsCount || 0,
+      tags: post.tags || [],
+      text: post.text
+    };
+  });
+
+  if (loading) return <div>Загрузка...</div>;
+
   return (
     <>
       <Tabs style={{ marginBottom: 15 }} value={0} aria-label="basic tabs example">
-        <Tab label="Новые" />
-        <Tab label="Популярные" />
+        <Tab label="Новости" />
       </Tabs>
       <Grid container spacing={4}>
-        <Grid xs={8} item>
-          {posts.map((item, index) => (
+        <Grid item xs={8}>
+          {allPosts.map((post) => (
             <Post
-              key={item._id}
-              _id={item._id}
-              title={item.title}
-              imageUrl={item.image}
-              user={{
-                avatarUrl:
-                  'https://res.cloudinary.com/practicaldev/image/fetch/s--uigxYVRB--/c_fill,f_auto,fl_progressive,h_50,q_auto,w_50/https://dev-to-uploads.s3.amazonaws.com/uploads/user/profile_image/187971/a5359a24-b652-46be-8898-2c5df32aa6e0.png',
-                fullName: 'Keff',
-              }}
-              createdAt={item.date.split("T")[0].replaceAll("-", ".")}
-              viewsCount={item.viewsCount}
-              commentsCount={3}
-              tags={item.tags}
-              isEditable
+              key={post.id || post._id}
+              {...post}
             />
           ))}
-        </Grid>
-        <Grid xs={4} item>
-          <TagsBlock items={['react', 'typescript', 'заметки']} isLoading={false} />
-          <CommentsBlock
-            items={[
-              {
-                user: {
-                  fullName: 'Вася Пупкин',
-                  avatarUrl: 'https://mui.com/static/images/avatar/1.jpg',
-                  
-                },
-                text: 'Это тестовый комментарий',
-              },
-              {
-                user: {
-                  fullName: 'Иван Иванов',
-                  avatarUrl: 'https://mui.com/static/images/avatar/2.jpg',
-                },
-                text: 'When displaying three lines or more, the avatar is not aligned at the top. You should set the prop to align the avatar at the top',
-              },
-            ]}
-            isLoading={false}
-          />
         </Grid>
       </Grid>
     </>

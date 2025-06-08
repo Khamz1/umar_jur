@@ -1,75 +1,80 @@
 import React, { useEffect, useState } from "react";
-
 import { Post } from "../components/Post";
-import { Index } from "../components/AddComment";
-import { CommentsBlock } from "../components/CommentsBlock";
-import { getPostById } from "./services/routes";
 import { useParams } from "react-router-dom";
 import { QRCodeGenerator } from "../QRCodeGenerator";
+import { legalCases } from "./services/cases/cases";
 
 export const FullPost = () => {
-  const [post, setPost] = useState({})
-  const { id } = useParams()
-  const fetchPost = async () => {
-    try {
-      const data = await getPostById(id);
-      setPost(data.data)
-    } catch (error) {
-      console.log(error)
-    }
-  }
+  const [post, setPost] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const { id } = useParams();
 
   useEffect(() => {
-    fetchPost()
-  }, [setPost])
+    // 1. Сначала ищем в пользовательских постах (localStorage)
+    const savedPosts = JSON.parse(localStorage.getItem('posts')) || [];
+    let foundPost = savedPosts.find(p => p._id === id);
 
-  console.log(post);
+    // 2. Если не нашли - ищем в legalCases
+    if (!foundPost) {
+      foundPost = legalCases.find(caseItem => caseItem.id.toString() === id.toString());
+      
+      // Если нашли дело - преобразуем в структуру поста
+      if (foundPost) {
+        foundPost = {
+          ...foundPost,
+          _id: foundPost.id.toString(), // Приводим к строке для единообразия
+          user: {
+           
+            avatarUrl: "https://mui.com/static/images/avatar/1.jpg"
+          },
+          viewsCount: 0,
+          comments: []
+        };
+      }
+    }
+
+    setPost(foundPost || null);
+    setLoading(false);
+  }, [id]);
+
+  if (loading) return <div>Загрузка...</div>;
+  if (!post) return <div>Пост не найден</div>;
+
+  // Функция для обработки изображений
+  const getImageUrl = (url) => {
+    if (!url) return null;
+    if (url.startsWith('http') || url.startsWith('data:image')) return url;
+    return `http://localhost:4444${url}`;
+  };
 
   return (
-    <>
-      <Post
-        id={1}
-        title={post.title}
-        imageUrl="https://res.cloudinary.com/practicaldev/image/fetch/s--UnAfrEG8--/c_imagga_scale,f_auto,fl_progressive,h_420,q_auto,w_1000/https://dev-to-uploads.s3.amazonaws.com/uploads/articles/icohm5g0axh9wjmu4oc3.png"
-        user={{
-          avatarUrl:
-            "https://res.cloudinary.com/practicaldev/image/fetch/s--uigxYVRB--/c_fill,f_auto,fl_progressive,h_50,q_auto,w_50/https://dev-to-uploads.s3.amazonaws.com/uploads/user/profile_image/187971/a5359a24-b652-46be-8898-2c5df32aa6e0.png",
-          fullName: "Keff",
-        }}
-        createdAt={"12 июня 2022 г."}
-        viewsCount={post.viewsCount}
-        commentsCount={post.commentsCount}
-        tags={["react", "fun", "typescript"]}
-        isFullPost
-      >
-        <div>
-          {post.text && post.text.split("\n").map((text) => <p>{text}</p>)}
-        </div>
-        <div className="qr" >
-          <QRCodeGenerator value={'https://fparf.ru/upload/medialibrary/9cc/hs6k4sqzljz4ri9e8k5sm8za3l0eqgjz/Kas.opredelenie.pdf'}/>
-        </div>
-      </Post>
-      <CommentsBlock
-        items={[
-          {
-            user: {
-              fullName: "Вася Пупкин",
-              avatarUrl: "https://mui.com/static/images/avatar/1.jpg",
-            },
-            text: "Это тестовый комментарий 555555",
-          },
-          {
-            user: {
-              fullName: "Иван Иванов",
-              avatarUrl: "https://mui.com/static/images/avatar/2.jpg",
-            },
-            text: "When displaying three lines or more, the avatar is not aligned at the top. You should set the prop to align the avatar at the top",
-          },
-        ]}
-        isLoading={false}
-      >
-        <Index />
-      </CommentsBlock>
-    </>
+    <Post
+      _id={post._id}
+      title={post.title}
+      text={post.text}
+      imageUrl={getImageUrl(post.imageUrl)}
+      user={post.user || {
+        avatarUrl: "https://mui.com/static/images/avatar/1.jpg",
+        fullName: "Автор не указан"
+      }}
+      createdAt={post.createdAt}
+      viewsCount={post.viewsCount || 0}
+      tags={post.tags || []}
+      isFullPost
+    >
+      <div style={{ marginBottom: 20 }}>
+        {post.text && post.text.split("\n").map((text, i) => (
+          <p key={i}>{text}</p>
+        ))}
+      </div>
+      
+      <div className="qr" style={{ marginTop: 30, textAlign: 'center' }}>
+        <QRCodeGenerator 
+          value={window.location.href}
+          size={150}
+        />
+        <p style={{ marginTop: 10 }}>Отсканируйте QR-код для быстрого доступа</p>
+      </div>
+    </Post>
   );
 };

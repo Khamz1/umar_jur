@@ -1,83 +1,112 @@
 import React from 'react';
-import clsx from 'clsx';
-import IconButton from '@mui/material/IconButton';
-import DeleteIcon from '@mui/icons-material/Clear';
-import EditIcon from '@mui/icons-material/Edit';
-import EyeIcon from '@mui/icons-material/RemoveRedEyeOutlined';
-import CommentIcon from '@mui/icons-material/ChatBubbleOutlineOutlined';
+import { useNavigate } from 'react-router-dom';
+import Card from '@mui/material/Card';
+import CardHeader from '@mui/material/CardHeader';
+import CardMedia from '@mui/material/CardMedia';
+import Avatar from '@mui/material/Avatar';
+import Typography from '@mui/material/Typography';
+import Box from '@mui/material/Box';
 
-import styles from './Post.module.scss';
-import { UserInfo } from '../UserInfo';
-import { PostSkeleton } from './Skeleton';
-import { Link } from 'react-router-dom';
-
-export const Post = ({
+export const Post = ({ 
+  id,
   _id,
-  title,
-  createdAt,
-  imageUrl,
-  user,
-  viewsCount,
-  commentsCount,
-  tags,
-  children,
-  isFullPost,
-  isLoading,
-  isEditable,
+  title, 
+  imageUrl, 
+  user = {}, 
+  createdAt, 
+  viewsCount, 
+  tags = [],
+  text 
 }) => {
-  if (isLoading) {
-    return <PostSkeleton />;
-  }
+  const navigate = useNavigate();
 
-  const onClickRemove = () => {};
+  const handleTitleClick = () => {
+    navigate(`/posts/${_id || id}`);
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Дата не указана';
+    try {
+      return new Date(dateString).toLocaleDateString('ru-RU', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } catch {
+      return dateString;
+    }
+  };
+
+  // Улучшенная обработка изображений
+  const getImageUrl = () => {
+    if (!imageUrl) return null;
+    
+    // Если это URL из legalCases
+    if (imageUrl.startsWith('http')) return imageUrl;
+    
+    // Если это локальный путь из ваших постов
+    if (imageUrl.startsWith('/')) {
+      return `http://localhost:4444${imageUrl}`;
+    }
+    
+    // Для других случаев
+    return imageUrl;
+  };
+
+  const imageSrc = getImageUrl();
 
   return (
-    <div className={clsx(styles.root, { [styles.rootFull]: isFullPost })}>
-      {isEditable && (
-        <div className={styles.editButtons}>
-          <Link to={`/posts/${_id}/edit`}>
-            <IconButton color="primary">
-              <EditIcon />
-            </IconButton>
-          </Link>
-          <IconButton onClick={onClickRemove} color="secondary">
-            <DeleteIcon />
-          </IconButton>
-        </div>
-      )}
-      {imageUrl && (
-        <img
-          className={clsx(styles.image, { [styles.imageFull]: isFullPost })}
-          src='https://sun9-8.userapi.com/tdn4wyQl1qAiBtxozd7GvhOnXcbmyCBleAnmnA/biI0FMMrKsY.jpg'
+    <Card sx={{ mb: 4, cursor: 'pointer' }} onClick={handleTitleClick}>
+      <CardHeader
+        avatar={
+          <Avatar 
+            src={user.avatarUrl || 'https://mui.com/static/images/avatar/1.jpg'} 
+            alt={user.fullName}
+          />
+        }
+        title={user.fullName || 'Анонимный автор'}
+        subheader={formatDate(createdAt)}
+      />
+
+      {imageSrc && (
+        <CardMedia
+          component="img"
+          height="300"
+          image={imageSrc}
           alt={title}
+          sx={{ objectFit: 'cover' }}
+          onError={(e) => {
+            e.target.style.display = 'none'; // Скрываем если изображение не загрузилось
+          }}
         />
       )}
-      <div className={styles.wrapper}>
-        <UserInfo {...user} additionalText={createdAt} />
-        <div className={styles.indention}>
-          <h2 className={clsx(styles.title, { [styles.titleFull]: isFullPost })}>
-            {isFullPost ? title : <Link to={`/posts/${_id}`}>{title}</Link>}
-          </h2>
-          <ul className={styles.tags}>
-            {tags.map((name) => (
-              <li key={name}>
-                <Link to={`/tag/${name}`}>#{name}</Link>
-              </li>
+
+      <Box sx={{ p: 2 }}>
+        <Typography variant="h5" gutterBottom>
+          {title || 'Без названия'}
+        </Typography>
+
+        {text && (
+          <Typography paragraph sx={{ mb: 2 }}>
+            {text.length > 150 ? `${text.substring(0, 150)}...` : text}
+          </Typography>
+        )}
+
+        {tags.length > 0 && (
+          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+            {tags.map((tag, index) => (
+              <Typography 
+                key={index} 
+                variant="caption" 
+                color="primary"
+                sx={{ px: 1, py: 0.5, bgcolor: 'primary.light', borderRadius: 1 }}
+              >
+                #{tag}
+              </Typography>
             ))}
-          </ul>
-          {children && <div className={styles.content}>{children}</div>}
-          <ul className={styles.postDetails}>
-            <li>
-              <EyeIcon />
-              <span>{viewsCount}</span>
-            </li>
-            <li>
-              <CommentIcon />
-              <span>{commentsCount}</span>
-            </li>
-          </ul>
-        </div>
-      </div>
-    </div>
+          </Box>
+        )}
+      </Box>
+    </Card>
   );
 };

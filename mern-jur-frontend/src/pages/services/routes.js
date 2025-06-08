@@ -10,10 +10,11 @@ export const getPostById = (id) => {
     return api.get("/posts/" + id)
 }
 
-export const createPost = (data) => {
-    return api.get("/posts", data)
+export const createPost =  async (data) => {
+    const response = await api.get('/posts');
+        return response.data;
 }
-
+    
 // auth
 export const register = (data) => {
     return api.post("/auth/register", data)

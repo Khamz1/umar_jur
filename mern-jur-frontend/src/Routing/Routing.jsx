@@ -12,7 +12,8 @@ const routesList = [
     { key: "AddPost", path: "/posts/create", Page: AddPost },
     { key: "FullPost", path: "/posts/:id", Page: FullPost },
     {key:"Jurs", path:'/jurs', Page:Jurs},
-    {key:"Contact", path:'/contact', Page:ContactLawyerForm}
+    {key:"Contact", path:'/contact', Page:ContactLawyerForm},
+    
 ]
 export const Routing = () => (
 

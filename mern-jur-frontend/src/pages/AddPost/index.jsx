@@ -1,102 +1,161 @@
-import React, { useEffect, useState } from 'react';
-import TextField from '@mui/material/TextField';
-import Paper from '@mui/material/Paper';
-import Button from '@mui/material/Button';
-import SimpleMDE from 'react-simplemde-editor';
+  import React, { useState, useCallback, useMemo, useEffect } from 'react';
+  import TextField from '@mui/material/TextField';
+  import Paper from '@mui/material/Paper';
+  import Button from '@mui/material/Button';
+  import SimpleMDE from 'react-simplemde-editor';
+  import 'easymde/dist/easymde.min.css';
+  import styles from './AddPost.module.scss';
+  import { useNavigate } from 'react-router-dom';
+  import { jwtDecode } from '../../helpers/jwtDecode';
 
-import 'easymde/dist/easymde.min.css';
-import styles from './AddPost.module.scss';
-import { createPost } from '../services/routes';
-import { jwtDecode } from '../../helpers/jwtDecode';
+  export const AddPost = () => {
+    const [value, setValue] = useState('');
+    const [imageUrl, setImageUrl] = useState('');
+    const navigate = useNavigate();
 
-export const AddPost = () => {
-  const imageUrl = '';
-  const [value, setValue] = React.useState('');
+    const [data, setData] = useState({
+      title: '',
+      text: '',
+      tags: '',
+      userId: '',
+    });
 
-  const handleChangeFile = () => { };
+    const handleChangeFile = async (e) => {
+      try {
+        const file = e.target.files[0];
+        if (!file) return;
 
-  const onClickRemoveImage = () => { };
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setImageUrl(reader.result);
+        };
+        reader.readAsDataURL(file);
+      } catch (err) {
+        console.error('Ошибка загрузки изображения:', err);
+      }
+    };
 
-  const onChange = React.useCallback((value) => {
-    setValue(value);
-  }, []);
+    const onClickRemoveImage = () => {
+      setImageUrl('');
+    };
 
-  const options = React.useMemo(
-    () => ({
-      spellChecker: false,
-      maxHeight: '400px',
-      autofocus: true,
-      placeholder: 'Введите текст...',
-      status: false,
-      autosave: {
-        enabled: true,
-        delay: 1000,
-      },
-    }),
-    [],
-  );
+    const onChange = useCallback((value) => {
+      setValue(value);
+    }, []);
 
-  const [data, setData] = useState({
-    title: '',
-    text: '',
-    imageUrl: '',
-    tags: '',
-    userId: '',
-  });
+    const options = useMemo(
+      () => ({
+        spellChecker: false,
+        maxHeight: '400px',
+        autofocus: true,
+        placeholder: 'Введите текст...',
+        status: false,
+        autosave: {
+          enabled: true,
+          delay: 1000,
+        },
+      }),
+      []
+    );
 
-  const handleCreatePost = () => {
-    console.log(data)
-    createPost(data);
+    const handleCreatePost = () => {
+      // Получаем текущие посты из localStorage
+      const posts = JSON.parse(localStorage.getItem('posts') || '[]');
 
-  }
+      // Создаём новый пост
+      const newPost = {
+        _id: Date.now().toString(),
+        title: data.title,
+        text: value,
+        imageUrl: imageUrl,
+        tags: data.tags.split(','),
+        user: {
+          _id: data.userId,
+          fullName: 'User',
+        },
+        createdAt: new Date().toISOString(),
+        viewsCount: 0,
+      };
 
-  const handleChange = (e) => {
-    setData(prev => ({ ...prev, [e.target.name]: e.target.value }))
-  }
+      // Добавляем новый пост и сохраняем
+      const updatedPosts = [newPost, ...posts];
+      localStorage.setItem('posts', JSON.stringify(updatedPosts));
 
-  useEffect(() => {
-    if (localStorage.getItem("token")) {
-      setData(prev => ({ ...prev, userId: jwtDecode(localStorage.getItem("token"))._id }))
-    }
-  }, [setData])
+      // Перенаправляем на страницу поста
+      navigate(`/posts/${newPost._id}`);
+    };
 
-  console.log(data);
-  
+    const handleChange = (e) => {
+      setData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    };
 
-  return (
-    <Paper style={{ padding: 30 }}>
-      <Button variant="outlined" size="large">
-         Загрузить превью
-      </Button>
-      <input type="file" onChange={handleChangeFile} hidden />
-      {imageUrl && (
-        <Button variant="contained" color="error" onClick={onClickRemoveImage}>
-          Удалить
+    useEffect(() => {
+      if (localStorage.getItem('token')) {
+        const decoded = jwtDecode(localStorage.getItem('token'));
+        setData((prev) => ({ ...prev, userId: decoded._id }));
+      }
+    }, []);
+
+    return (
+      <Paper style={{ padding: 30 }}>
+        <Button 
+          variant="outlined" 
+          size="large" 
+          component="label"
+        >
+          Загрузить превью
+          <input 
+            type="file" 
+            onChange={handleChangeFile} 
+            hidden 
+            accept="image/*" 
+          />
         </Button>
-      )}
-      {imageUrl && (
-        <img className={styles.image} src={`http://localhost:4444${imageUrl}`} alt="Uploaded" />
-      )}
-      <br />
-      <br />
-      <TextField
-        classes={{ root: styles.title }}
-        variant="standard"
-        placeholder="Заголовок статьи..."
-        fullWidth
-        name="title"
-        onChange={handleChange}
-      />
-      <TextField classes={{ root: styles.tags }} variant="standard" placeholder="Тэги" fullWidth name="tags" onChange={handleChange} />
-      <SimpleMDE className={styles.editor} value={value} onChange={onChange} options={options} onInput={(e) => setData(prev => ({ ...prev, text: e.target.value }))} />
-      <div className={styles.buttons}>
-        <Button size="large" variant="contained" onClick={handleCreatePost}>
-          Опубликовать
-        </Button>
-        <a href="/">
-          <Button size="large">Отмена</Button>
-        </a>
-      </div>
-    </Paper>
-  );
-};
+        {imageUrl && (
+          <>
+            <Button variant="contained" color="error" onClick={onClickRemoveImage}>
+              Удалить
+            </Button>
+            <img 
+              className={styles.image} 
+              src={imageUrl} 
+              alt="Uploaded" 
+              style={{ maxWidth: '100%', marginTop: 10 }} 
+            />
+          </>
+        )}
+        <br />
+        <br />
+        <TextField
+          classes={{ root: styles.title }}
+          variant="standard"
+          placeholder="Заголовок статьи..."
+          fullWidth
+          name="title"
+          onChange={handleChange}
+        />
+        <TextField
+          classes={{ root: styles.tags }}
+          variant="standard"
+          placeholder="Тэги"
+          fullWidth
+          name="tags"
+          onChange={handleChange}
+        />
+        <SimpleMDE
+          className={styles.editor}
+          value={value}
+          onChange={onChange}
+          options={options}
+        />
+        <div className={styles.buttons}>
+          <Button size="large" variant="contained" onClick={handleCreatePost}>
+            Опубликовать
+          </Button>
+          <a href="/">
+            <Button size="large">Отмена</Button>
+          </a>
+        </div>
+      </Paper>
+    );
+  };

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Container,
   Typography,
@@ -8,10 +8,16 @@ import {
   Paper,
   styled,
   InputAdornment,
-  IconButton
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  Input
 } from '@mui/material';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
 import SendIcon from '@mui/icons-material/Send';
+import { useNavigate } from 'react-router-dom';
+import { QRCodeGenerator } from '../../QRCodeGenerator';
 
 const ContactPaper = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(4),
@@ -32,6 +38,7 @@ const SubmitButton = styled(Button)(({ theme }) => ({
 }));
 
 export const ContactLawyerForm = () => {
+  const navigate = useNavigate()
   const [formData, setFormData] = React.useState({
     subject: '',
     details: '',
@@ -39,18 +46,24 @@ export const ContactLawyerForm = () => {
     file: null
   });
 
+  const [openConfirmDialog, setOpenConfirmDialog] = useState(false)
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleFileChange = (e) => {
-    setFormData(prev => ({ ...prev, file: e.target.files[0] }));
+    setFormData(prev => ({ ...prev, file: e.target.value }));
   };
+
+  console.log(formData);
+
 
   const handleSubmit = (e) => {
     e.preventDefault();
     console.log('Форма отправлена:', formData);
+    setOpenConfirmDialog(true)
     // Здесь будет логика отправки формы
   };
 
@@ -59,7 +72,7 @@ export const ContactLawyerForm = () => {
       <Typography variant="h4" align="center" gutterBottom>
         Свяжитесь с адвокатом
       </Typography>
-      
+
       <ContactPaper elevation={3}>
         <form onSubmit={handleSubmit}>
           <TextField
@@ -71,7 +84,7 @@ export const ContactLawyerForm = () => {
             margin="normal"
             required
           />
-          
+
           <TextField
             fullWidth
             label="Подробности дела"
@@ -83,7 +96,7 @@ export const ContactLawyerForm = () => {
             rows={4}
             required
           />
-          
+
           <TextField
             fullWidth
             label="Средство для обратной связи"
@@ -94,7 +107,7 @@ export const ContactLawyerForm = () => {
             required
             placeholder="Email или телефон"
           />
-          
+
           <Box sx={{ mt: 2, mb: 3 }}>
             <input
               accept=".pdf,.doc,.docx,.jpg,.png"
@@ -104,13 +117,14 @@ export const ContactLawyerForm = () => {
               onChange={handleFileChange}
             />
             <label htmlFor="case-file-upload">
-              <Button
+              {/* <Button
                 variant="outlined"
                 component="span"
                 startIcon={<AttachFileIcon />}
               >
                 Загрузить дело
-              </Button>
+              </Button> */}
+              <Input placeholder='Ссылка на дело' onChange={handleFileChange}/>
             </label>
             {formData.file && (
               <Typography variant="body2" sx={{ mt: 1 }}>
@@ -118,7 +132,7 @@ export const ContactLawyerForm = () => {
               </Typography>
             )}
           </Box>
-          
+
           <SubmitButton
             fullWidth
             variant="contained"
@@ -128,6 +142,23 @@ export const ContactLawyerForm = () => {
             Отправить запрос
           </SubmitButton>
         </form>
+
+        <Dialog open={openConfirmDialog}>
+          <DialogTitle>Отправлено</DialogTitle>
+          <DialogContent>
+            <Typography>
+              Ваше обращение направлено к адвокату.
+            </Typography>
+            <Typography>
+              QR-код на дело:
+              <QRCodeGenerator value={formData.file} />
+            </Typography>
+          </DialogContent>
+          <Button onClick={() => {
+            navigate("/")
+            setOpenConfirmDialog(false)
+          }}>Закрыть</Button>
+        </Dialog>
       </ContactPaper>
     </Container>
   );

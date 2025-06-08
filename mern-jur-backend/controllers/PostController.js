@@ -105,11 +105,18 @@ export const remove = async (req, res) => {
 };
 
 export const create = async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ message: "Image is required" });
+  }
   try {
+
+    const fullImageUrl = `${req.protocol}://${req.get("host")}/${req.file.path
+      }`;
+
     const doc = new PostModel({
       title: req.body.title,
       text: req.body.text,
-      imageUrl: req.body.imageUrl,
+      imageUrl: fullImageUrl,
       tags: req.body.tags.split(','),
       user: req.body.userId,
     });
